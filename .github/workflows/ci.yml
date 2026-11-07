@@ -1,3 +1,4 @@
+
 name: Node.js CI/CD Pipeline
 
 on:
@@ -46,11 +47,13 @@ jobs:
           name: application-package
           path: artifacts/*.tgz
           if-no-files-found: error
+          retention-days: 7
 
   test:
     name: Test on Node.js ${{ matrix.node }}
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     strategy:
       fail-fast: false
@@ -77,6 +80,7 @@ jobs:
     name: Docker Build and Smoke Test
     needs: [build, test]
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout repository
@@ -96,10 +100,13 @@ jobs:
         run: |
           for i in 1 2 3 4 5 6 7 8 9 10; do
             if curl -fsS http://127.0.0.1:3001/health; then
+              echo "Docker container health check passed"
               exit 0
             fi
             sleep 2
           done
+
+          echo "Docker container health check failed"
           docker logs ci-app
           exit 1
 
@@ -107,12 +114,16 @@ jobs:
         if: always()
         run: docker logs ci-app 2>&1 || true
 
+      - name: Clean up container
+        if: always()
+        run: docker rm -f ci-app 2>/dev/null || true
 
-          publish:
+  publish:
     name: Publish Docker Image to GHCR
     needs: [build, test, docker]
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     permissions:
       contents: read
