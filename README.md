@@ -125,3 +125,121 @@ https://github.com/ifobook/github-actions-cicd-mastery
 ## Conclusion
 
 This project demonstrates event-driven CI, workflow-as-code, automated testing, dependency auditing, caching, and artifact generation using GitHub Actions.
+
+---
+
+## Advanced CI/CD Architecture
+
+The enhanced GitHub Actions pipeline contains four dependent jobs, including a two-version test matrix.
+
+### Job 1: Build, Audit and Package
+
+- Checks out the repository.
+- Configures Node.js 24 with npm caching.
+- Installs dependencies using `npm ci`.
+- Validates the application build.
+- Performs an npm security audit.
+- Creates and uploads an npm package artifact.
+
+### Job 2: Automated Test Matrix
+
+Uses GitHub Actions matrix strategy to execute tests independently on:
+
+- Node.js 22
+- Node.js 24
+
+The test job depends on the successful completion of the build job.
+
+### Job 3: Docker Build and Smoke Test
+
+Runs after the build and matrix tests succeed.
+
+- Builds the application Docker image.
+- Starts a container.
+- Calls the `/health` endpoint.
+- Verifies the application responds successfully.
+- Captures container logs and cleans up.
+
+### Job 4: Publish Docker Image to GHCR
+
+Runs only on pushes to `main` or manual executions on `main`, after all preceding jobs succeed.
+
+- Authenticates to GitHub Container Registry.
+- Uses the automatically generated `GITHUB_TOKEN`.
+- Grants `packages: write` permission only to the publishing job.
+- Builds and publishes the Docker image.
+- Tags the image with `latest` and the Git commit SHA.
+
+### Published Container Image
+
+Registry:
+
+    ghcr.io/ifobook/github-actions-cicd-mastery
+
+Pull the latest image:
+
+    docker pull ghcr.io/ifobook/github-actions-cicd-mastery:latest
+
+Run the image:
+
+    docker run --rm -p 127.0.0.1:3001:3000 \
+      ghcr.io/ifobook/github-actions-cicd-mastery:latest
+
+Verify:
+
+    curl http://127.0.0.1:3001/health
+
+The image must be publicly accessible for unauthenticated pulls.
+
+## CI/CD Security
+
+The workflow demonstrates:
+
+- Restricted repository permissions.
+- Job-specific package publishing permissions.
+- Secure GHCR authentication using GitHub-managed credentials.
+- No hardcoded access tokens.
+- Dependency auditing.
+- Reproducible npm installations.
+- Docker execution as a non-root user.
+
+## Pipeline Monitoring and Troubleshooting
+
+### YAML Syntax Error
+
+During implementation, GitHub Actions initially rejected the publishing workflow because the `publish` job was incorrectly indented.
+
+The issue was diagnosed using GitHub Actions annotations and resolved by correcting the YAML structure.
+
+### Workflow Validation
+
+The corrected pipeline subsequently completed successfully, including Docker image publishing.
+
+### Monitoring
+
+Workflow execution can be monitored under the repository's Actions tab.
+
+Individual job logs provide detailed evidence of dependency installation, build execution, automated tests, Docker validation, and image publishing.
+
+## Advanced Pipeline Evidence
+
+- [Node.js Test Matrix](screenshots/github-actions-matrix.png)
+- [Docker CI Execution](screenshots/github-actions-docker-ci.png)
+- [Successful Full CI/CD Pipeline](screenshots/github-actions-ghcr-success.png)
+- [GHCR Publishing Logs](screenshots/github-actions-ghcr-publish.png)
+- [Published GHCR Package](screenshots/github-container-registry.png)
+- [Local Docker Build](screenshots/docker-build-success.png)
+- [Local Docker Container](screenshots/docker-container-running.png)
+- [Docker Health Check](screenshots/docker-health-check.png)
+
+## Development History
+
+The project was implemented incrementally through dedicated Git commits covering:
+
+1. Initial CI pipeline.
+2. Workflow modernization and documentation.
+3. Docker containerization.
+4. Multi-job CI and Node.js matrix testing.
+5. GHCR publishing.
+6. Workflow troubleshooting and correction.
+7. Final evidence and documentation.
