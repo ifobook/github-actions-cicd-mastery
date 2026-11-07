@@ -1,0 +1,8 @@
+.github/
+screenshots/
+docs/
+tests/
+.env
+.env.*
+.gitignore
+.nvmrc
